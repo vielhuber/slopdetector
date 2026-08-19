@@ -1,0 +1,8 @@
+/vendor/
+/node_modules/
+/.phpunit.cache/
+/.phpunit.result.cache
+/mcp-server.log
+/.env
+/composer.lock
+/package-lock.json
