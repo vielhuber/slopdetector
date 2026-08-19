@@ -132,7 +132,7 @@ final class Pangram implements Provider
     {
         $response = $this->requestJson(method: 'GET', url: self::TEXT_API_URL . '/models');
         $models = $response['models'] ?? null;
-        if (!is_array($models) || $models === [] || !in_array('default', $models, true)) {
+        if (!is_array($models) || $models === []) {
             throw new ApiException('Pangram returned an invalid model catalog.');
         }
         foreach ($models as $model) {
@@ -223,12 +223,7 @@ final class Pangram implements Provider
         if (trim($text) === '') {
             throw new \InvalidArgumentException('Text must not be empty.');
         }
-        return $this->requestJson(
-            method: 'POST',
-            url: self::PLAGIARISM_API_URL,
-            json: ['text' => $text, 'source' => 'slopdetector_1.0.0'],
-            timeout: 90
-        );
+        return $this->requestJson(method: 'POST', url: self::PLAGIARISM_API_URL, json: ['text' => $text], timeout: 90);
     }
 
     public function analyzeFile(string $filePath, bool $publicDashboardLink = false, int $timeout = 300): array
@@ -410,8 +405,7 @@ final class slopdetector
             }
         }
 
-        $configuredProvider =
-            $_ENV['SLOPDETECTOR_PROVIDER'] ?? ($_SERVER['SLOPDETECTOR_PROVIDER'] ?? getenv('SLOPDETECTOR_PROVIDER'));
+        $configuredProvider = $_ENV['PROVIDER'] ?? ($_SERVER['PROVIDER'] ?? getenv('PROVIDER'));
         $provider = strtolower(trim($provider ?? (is_string($configuredProvider) ? $configuredProvider : 'pangram')));
         if ($provider === '') {
             $provider = 'pangram';

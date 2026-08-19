@@ -19,6 +19,14 @@ final class Test extends \PHPUnit\Framework\TestCase
         $this->assertSame('test-key', $client->requests[0]['headers']['x-api-key']);
     }
 
+    public function test__accepts_model_catalog_without_default_alias(): void
+    {
+        $client = new FakeClient(new Response(200, '{"models":["pangram-4"]}'));
+        $detector = new Pangram(apiKey: 'test-key', client: $client);
+
+        $this->assertSame(['pangram-4'], $detector->listModels());
+    }
+
     public function test__analyzes_text_through_async_task_api(): void
     {
         $client = new FakeClient(
@@ -55,7 +63,7 @@ final class Test extends \PHPUnit\Framework\TestCase
 
         $this->assertFalse($result['plagiarism_detected']);
         $this->assertSame('https://plagiarism.api.pangram.com', $client->requests[0]['url']);
-        $this->assertSame('Original text', $client->requests[0]['json']['text']);
+        $this->assertSame(['text' => 'Original text'], $client->requests[0]['json']);
     }
 
     public function test__analyzes_supported_file_as_multipart(): void
@@ -172,20 +180,20 @@ final class Test extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function test__facade_reads_phpdotenv_environment(): void
+    public function test__facade_reads_process_environment(): void
     {
-        $previousProvider = $_ENV['SLOPDETECTOR_PROVIDER'] ?? null;
+        $previousProvider = $_ENV['PROVIDER'] ?? null;
         $previousApiKey = $_ENV['PANGRAM_API_KEY'] ?? null;
-        $_ENV['SLOPDETECTOR_PROVIDER'] = 'pangram';
+        $_ENV['PROVIDER'] = 'pangram';
         $_ENV['PANGRAM_API_KEY'] = 'environment-key';
 
         try {
             $this->assertInstanceOf(slopdetector::class, new slopdetector());
         } finally {
             if ($previousProvider === null) {
-                unset($_ENV['SLOPDETECTOR_PROVIDER']);
+                unset($_ENV['PROVIDER']);
             } else {
-                $_ENV['SLOPDETECTOR_PROVIDER'] = $previousProvider;
+                $_ENV['PROVIDER'] = $previousProvider;
             }
             if ($previousApiKey === null) {
                 unset($_ENV['PANGRAM_API_KEY']);

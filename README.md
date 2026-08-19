@@ -25,7 +25,7 @@ composer require vielhuber/slopdetector
 copy `.env.example` to `.env` or provide the same variables through the process environment:
 
 ```dotenv
-SLOPDETECTOR_PROVIDER=pangram
+PROVIDER=pangram
 PANGRAM_API_KEY=your_api_key
 MCP_TOKEN=
 ```
@@ -109,7 +109,7 @@ $results = $detector->getBulkResults(bulkId: $job['bulk_id'], offset: 0, limit: 
 
 ## providers
 
-providers implement `vielhuber\slopdetector\Provider`. the selected provider is configured through `SLOPDETECTOR_PROVIDER`; currently supported: `pangram`.
+providers implement `vielhuber\slopdetector\Provider`. the selected provider is configured through `PROVIDER`; currently supported: `pangram`.
 
 ## MCP server
 

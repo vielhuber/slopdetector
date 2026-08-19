@@ -19,10 +19,7 @@ if ($projectDirectory === false) {
     $projectDirectory = dirname(__DIR__);
 }
 $envPath = $projectDirectory . '/.env';
-if (
-    !is_file($envPath) &&
-    file_put_contents($envPath, "MCP_TOKEN=\nSLOPDETECTOR_PROVIDER=pangram\nPANGRAM_API_KEY=\n") === false
-) {
+if (!is_file($envPath) && file_put_contents($envPath, "MCP_TOKEN=\nPROVIDER=pangram\nPANGRAM_API_KEY=\n") === false) {
     fwrite(STDERR, 'slopdetector-mcp-server: failed to create ' . $envPath . PHP_EOL);
     exit(1);
 }
