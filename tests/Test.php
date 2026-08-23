@@ -138,7 +138,7 @@ final class Test extends \PHPUnit\Framework\TestCase
 
             public function analyzeText(
                 string $text,
-                string $model,
+                string $model = '',
                 bool $publicDashboardLink = false,
                 int $timeout = 300,
                 int $pollIntervalMilliseconds = 500
@@ -156,7 +156,7 @@ final class Test extends \PHPUnit\Framework\TestCase
                 return ['file' => $filePath];
             }
 
-            public function submitBulk(array $items, string $model): array
+            public function submitBulk(array $items, string $model = ''): array
             {
                 return ['items' => $items, 'model' => $model];
             }

@@ -90,7 +90,7 @@ interface Provider
 
     public function analyzeText(
         string $text,
-        string $model,
+        string $model = '',
         bool $publicDashboardLink = false,
         int $timeout = 300,
         int $pollIntervalMilliseconds = 500
@@ -100,7 +100,7 @@ interface Provider
 
     public function analyzeFile(string $filePath, bool $publicDashboardLink = false, int $timeout = 300): array;
 
-    public function submitBulk(array $items, string $model): array;
+    public function submitBulk(array $items, string $model = ''): array;
 
     public function getBulkStatus(string $bulkId): array;
 
@@ -113,6 +113,9 @@ final class Pangram implements Provider
     private const FILE_API_URL = 'https://file-external.api.pangram.com';
     private const PLAGIARISM_API_URL = 'https://plagiarism.api.pangram.com';
     private const SUCCESS_STAGE = 'STAGE_SUCCESS';
+    // the other catalog entry classifies only english; on any other language
+    // it reports every text as human, which is no signal at all
+    private const DEFAULT_MODEL = 'pangram-4';
     private const FAILED_STAGE = 'STAGE_FAILED';
 
     private Client $client;
@@ -148,7 +151,7 @@ final class Pangram implements Provider
 
     public function analyzeText(
         string $text,
-        string $model,
+        string $model = '',
         bool $publicDashboardLink = false,
         int $timeout = 300,
         int $pollIntervalMilliseconds = 500
@@ -156,10 +159,7 @@ final class Pangram implements Provider
         if (trim($text) === '') {
             throw new \InvalidArgumentException('Text must not be empty.');
         }
-        $model = trim($model);
-        if ($model === '') {
-            throw new \InvalidArgumentException('Model must not be empty. Use list_models first.');
-        }
+        $model = trim($model) !== '' ? trim($model) : self::DEFAULT_MODEL;
         if ($timeout < 1) {
             throw new \InvalidArgumentException('Timeout must be at least one second.');
         }
@@ -257,15 +257,12 @@ final class Pangram implements Provider
         return $response[0];
     }
 
-    public function submitBulk(array $items, string $model): array
+    public function submitBulk(array $items, string $model = ''): array
     {
         if ($items === []) {
             throw new \InvalidArgumentException('Bulk items must not be empty.');
         }
-        $model = trim($model);
-        if ($model === '') {
-            throw new \InvalidArgumentException('Model must not be empty. Use list_models first.');
-        }
+        $model = trim($model) !== '' ? trim($model) : self::DEFAULT_MODEL;
 
         $allTexts = true;
         $allObjects = true;
@@ -296,7 +293,10 @@ final class Pangram implements Provider
             method: 'POST',
             url: self::TEXT_API_URL . '/bulk',
             json: [$allTexts ? 'text' : 'items' => $items, 'model' => $model],
-            expectedStatusCodes: [202]
+            expectedStatusCodes: [202],
+            // pangram rejects a bulk submission without it; derived from the payload
+            // so a repeated call for the same items does not create a second job
+            idempotencyKey: hash('sha256', json_encode([$items, $model]))
         );
     }
 
@@ -347,9 +347,13 @@ final class Pangram implements Provider
         ?array $json = null,
         ?array $multipart = null,
         int $timeout = 10,
-        array $expectedStatusCodes = [200]
+        array $expectedStatusCodes = [200],
+        ?string $idempotencyKey = null
     ): array {
         $headers = ['x-api-key' => $this->apiKey];
+        if ($idempotencyKey !== null) {
+            $headers['Idempotency-Key'] = $idempotencyKey;
+        }
         if ($json !== null) {
             $headers['Content-Type'] = 'application/json';
         }
@@ -442,7 +446,7 @@ final class slopdetector
     ]
     public function analyzeText(
         string $text,
-        string $model,
+        string $model = '',
         bool $publicDashboardLink = false,
         int $timeout = 300,
         int $pollIntervalMilliseconds = 500
@@ -507,7 +511,7 @@ final class slopdetector
             )
         ]
         array $items,
-        string $model
+        string $model = ''
     ): array {
         return $this->provider->submitBulk(items: $items, model: $model);
     }
