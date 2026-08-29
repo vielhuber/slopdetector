@@ -76,7 +76,7 @@ final class CurlClient implements Client
         curl_setopt_array($handle, $options);
         $body = curl_exec($handle);
         if ($body === false) {
-            throw new TransportException('HTTP request failed: ' . curl_error($handle));
+            throw new TransportException('HTTP request failed: ' . curl_error($handle), curl_errno($handle));
         }
 
         return new Response(statusCode: (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE), body: $body);
@@ -357,14 +357,27 @@ final class Pangram implements Provider
         if ($json !== null) {
             $headers['Content-Type'] = 'application/json';
         }
-        $response = $this->client->request(
-            method: $method,
-            url: $url,
-            headers: $headers,
-            json: $json,
-            multipart: $multipart,
-            timeout: $timeout
-        );
+        $retryDelays = [250000, 750000];
+        foreach ([0, ...$retryDelays] as $attempt => $retryDelay) {
+            if ($retryDelay > 0) {
+                usleep($retryDelay);
+            }
+            try {
+                $response = $this->client->request(
+                    method: $method,
+                    url: $url,
+                    headers: $headers,
+                    json: $json,
+                    multipart: $multipart,
+                    timeout: $timeout
+                );
+                break;
+            } catch (TransportException $exception) {
+                if ($exception->getCode() !== CURLE_COULDNT_RESOLVE_HOST || $attempt === count($retryDelays)) {
+                    throw $exception;
+                }
+            }
+        }
         if (!in_array($response->statusCode, $expectedStatusCodes, true)) {
             throw new ApiException(
                 'Pangram API returned HTTP ' . $response->statusCode . ': ' . substr($response->body, 0, 1000)

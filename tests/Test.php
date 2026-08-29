@@ -27,6 +27,21 @@ final class Test extends \PHPUnit\Framework\TestCase
         $this->assertSame(['pangram-4'], $detector->listModels());
     }
 
+    public function test__retries_transient_dns_resolution_failures(): void
+    {
+        $client = new FakeClient(
+            new \vielhuber\slopdetector\TransportException(
+                'HTTP request failed: Could not resolve host.',
+                CURLE_COULDNT_RESOLVE_HOST
+            ),
+            new Response(200, '{"models":["pangram-4"]}')
+        );
+        $detector = new Pangram(apiKey: 'test-key', client: $client);
+
+        $this->assertSame(['pangram-4'], $detector->listModels());
+        $this->assertCount(2, $client->requests);
+    }
+
     public function test__analyzes_text_through_async_task_api(): void
     {
         $client = new FakeClient(
@@ -209,10 +224,10 @@ final class FakeClient implements Client
     /** @var array<int, array<string, mixed>> */
     public array $requests = [];
 
-    /** @var Response[] */
+    /** @var array<int, Response|Throwable> */
     private array $responses;
 
-    public function __construct(Response ...$responses)
+    public function __construct(Response|Throwable ...$responses)
     {
         $this->responses = $responses;
     }
@@ -227,6 +242,9 @@ final class FakeClient implements Client
     ): Response {
         $this->requests[] = compact('method', 'url', 'headers', 'json', 'multipart', 'timeout');
         $response = array_shift($this->responses);
+        if ($response instanceof Throwable) {
+            throw $response;
+        }
         if (!($response instanceof Response)) {
             throw new RuntimeException('No fake response configured.');
         }
